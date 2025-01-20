@@ -4,6 +4,7 @@ import com.oppwa.mobile.connect.payment.PaymentParams;
 import com.oppwa.mobile.connect.payment.card.CardPaymentParams;
 import com.oppwa.mobile.connect.payment.stcpay.STCPayPaymentParams;
 import com.oppwa.mobile.connect.payment.stcpay.STCPayVerificationOption;
+import com.oppwa.mobile.connect.provider.ITransactionListener;
 import com.oppwa.mobile.connect.provider.OppPaymentProvider;
 import androidx.annotation.NonNull;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
@@ -28,7 +29,7 @@ import com.oppwa.mobile.connect.payment.CheckoutInfo;
 import com.oppwa.mobile.connect.payment.ImagesRequest;
 import com.oppwa.mobile.connect.payment.token.TokenPaymentParams;
 import com.oppwa.mobile.connect.provider.Connect;
-import com.oppwa.mobile.connect.provider.ITransactionListener;
+//import com.oppwa.mobile.connect.provider.ITransactionListener;
 import com.oppwa.mobile.connect.provider.Transaction;
 import com.oppwa.mobile.connect.provider.TransactionType;
 import android.net.Uri;
@@ -40,8 +41,8 @@ import java.util.List;
 import java.util.Set;
 
 public class PaymentPlugin  implements
-        PluginRegistry.ActivityResultListener ,ActivityAware,  ITransactionListener
-        , FlutterPlugin, MethodCallHandler , PluginRegistry.NewIntentListener {
+        PluginRegistry.ActivityResultListener ,ActivityAware
+        , FlutterPlugin, MethodCallHandler , PluginRegistry.NewIntentListener, ITransactionListener {
 
   private  MethodChannel.Result Result;
   private  String mode = "";
@@ -92,7 +93,7 @@ public class PaymentPlugin  implements
           brandsReadyUi = call.argument("brand");
           setStorePaymentDetailsMode = call.argument("setStorePaymentDetailsMode");
           openCheckoutUI(checkoutId) ;
-        break;
+          break;
         case "StoredCards" :
           cvv = call.argument("cvv");
           TokenID = call.argument("TokenID");
@@ -142,11 +143,13 @@ public class PaymentPlugin  implements
     // SET LANG
     checkoutSettings.setLocale(Lang);
 
+    checkoutSettings.setPaymentFormListener(new CustomFormListener());
+
     // SHOW TOTAL PAYMENT AMOUNT IN BUTTON
-    // checkoutSettings.setTotalAmountRequired(true);
+//    checkoutSettings.setTotalAmountRequired(true);
 
     //SET SHOPPER
-    checkoutSettings.setShopperResultUrl(ShopperResultUrl + "://result");
+//    checkoutSettings.setShopperResultUrl(ShopperResultUrl + "://result");
 
     //SAVE PAYMENT CARDS FOR NEXT
     if (setStorePaymentDetailsMode.equals("true")) {
@@ -160,10 +163,13 @@ public class PaymentPlugin  implements
             context.getPackageName(), CheckoutBroadcastReceiver.class.getName());
 
     // SET UP THE INTENT AND START THE CHECKOUT ACTIVITY
-    Intent intent = checkoutSettings.createCheckoutActivityIntent(context.getApplicationContext(), componentName);
+
+    Intent intent = new Intent(context.getApplicationContext(), CheckoutActivity.class);
+    intent.putExtra(CheckoutActivity.CHECKOUT_SETTINGS, checkoutSettings);
+    intent.putExtra(CheckoutActivity.CHECKOUT_RECEIVER, componentName);
 
     // START ACTIVITY
-    activity.startActivityForResult(intent, CheckoutActivity.REQUEST_CODE_CHECKOUT);
+    activity.startActivityForResult(intent, 242);
 
   }
 
@@ -191,7 +197,7 @@ public class PaymentPlugin  implements
 
       //Submit Transaction
       //Listen for transaction Completed - transaction Failed
-      paymentProvider.submitTransaction(transaction, this);
+      //  paymentProvider.submitTransaction(transaction, this);
 
     } catch (PaymentException e) {
       e.printStackTrace();
@@ -207,72 +213,44 @@ public class PaymentPlugin  implements
             ? "Please Waiting.."
             : "برجاء الانتظار..", Toast.LENGTH_SHORT).show();
 
-        if (!CardPaymentParams.isNumberValid(number , true)) {
-          Toast.makeText(activity.getApplicationContext(), Lang.equals("en_US")
-                  ? "Card number is not valid for brand"
-                  : "رقم البطاقة غير صالح",
-                  Toast.LENGTH_SHORT).show();
-        } else if (!CardPaymentParams.isHolderValid(holder)) {
-          Toast.makeText(activity.getApplicationContext(),  Lang.equals("en_US")
-                  ? "Holder name is not valid"
-                  : "اسم المالك غير صالح"
-                  , Toast.LENGTH_SHORT).show();
-        } else if (!CardPaymentParams.isExpiryYearValid(year)) {
-          Toast.makeText(activity.getApplicationContext(),  Lang.equals("en_US")
-                  ? "Expiry year is not valid"
-                  : "سنة انتهاء الصلاحية غير صالحة" ,
-                  Toast.LENGTH_SHORT).show();
-        } else if (!CardPaymentParams.isExpiryMonthValid(month)) {
-          Toast.makeText(activity.getApplicationContext(),  Lang.equals("en_US")
-                  ? "Expiry month is not valid"
-                  : "شهر انتهاء الصلاحية غير صالح"
-                  , Toast.LENGTH_SHORT).show();
-        } else if (!CardPaymentParams.isCvvValid(cvv)) {
-          Toast.makeText(activity.getApplicationContext(),  Lang.equals("en_US")
-                  ? "CVV is not valid"
-                  : "CVV غير صالح"
-                  , Toast.LENGTH_SHORT).show();
-        } else {
+    if (!CardPaymentParams.isNumberValid(number , true)) {
+      Toast.makeText(activity.getApplicationContext(), Lang.equals("en_US")
+                      ? "Card number is not valid for brand"
+                      : "رقم البطاقة غير صالح",
+              Toast.LENGTH_SHORT).show();
+    } else if (!CardPaymentParams.isHolderValid(holder)) {
+      Toast.makeText(activity.getApplicationContext(),  Lang.equals("en_US")
+                      ? "Holder name is not valid"
+                      : "اسم المالك غير صالح"
+              , Toast.LENGTH_SHORT).show();
+    } else if (!CardPaymentParams.isExpiryYearValid(year)) {
+      Toast.makeText(activity.getApplicationContext(),  Lang.equals("en_US")
+                      ? "Expiry year is not valid"
+                      : "سنة انتهاء الصلاحية غير صالحة" ,
+              Toast.LENGTH_SHORT).show();
+    } else if (!CardPaymentParams.isExpiryMonthValid(month)) {
+      Toast.makeText(activity.getApplicationContext(),  Lang.equals("en_US")
+                      ? "Expiry month is not valid"
+                      : "شهر انتهاء الصلاحية غير صالح"
+              , Toast.LENGTH_SHORT).show();
+    } else if (!CardPaymentParams.isCvvValid(cvv)) {
+      Toast.makeText(activity.getApplicationContext(),  Lang.equals("en_US")
+                      ? "CVV is not valid"
+                      : "CVV غير صالح"
+              , Toast.LENGTH_SHORT).show();
+    } else {
 
-          boolean EnabledTokenizationTemp = EnabledTokenization.equals("true");
-          try {
-            PaymentParams paymentParams = new CardPaymentParams(
-                    checkoutId, brands, number, holder, month, year, cvv
-            ).setTokenizationEnabled(EnabledTokenizationTemp);//Set Enabled TokenizationTemp
+      boolean EnabledTokenizationTemp = EnabledTokenization.equals("true");
+      try {
+        PaymentParams paymentParams = new CardPaymentParams(
+                checkoutId, brands, number, holder, month, year, cvv
+        ).setTokenizationEnabled(EnabledTokenizationTemp);//Set Enabled TokenizationTemp
 
-            paymentParams.setShopperResultUrl(ShopperResultUrl + "://result");
+        paymentParams.setShopperResultUrl(ShopperResultUrl + "://result");
 
-            Transaction transaction = new Transaction(paymentParams);
+        Transaction transaction = new Transaction(paymentParams);
 
-            //Set Mode;
-            boolean resultMode = mode.equals("test");
-            Connect.ProviderMode providerMode ;
-
-            if (resultMode) {
-              providerMode =  Connect.ProviderMode.TEST ;
-            } else {
-              providerMode =  Connect.ProviderMode.LIVE ;
-            }
-
-            paymentProvider = new OppPaymentProvider(activity.getBaseContext(), providerMode);
-
-            //Submit Transaction
-            //Listen for transaction Completed - transaction Failed
-            paymentProvider.submitTransaction(transaction, this);
-
-          } catch (PaymentException e) {
-            error("0.1", e.getLocalizedMessage(), "");
-          }
-        }
-  }
-
-  private void openCustomUISTC(String checkoutId) {
-
-    Toast.makeText(activity.getApplicationContext(), Lang.equals("en_US")
-            ? "Please Waiting.."
-            : "برجاء الانتظار..", Toast.LENGTH_SHORT).show();
-    try {
-        //Set Mode
+        //Set Mode;
         boolean resultMode = mode.equals("test");
         Connect.ProviderMode providerMode ;
 
@@ -282,14 +260,6 @@ public class PaymentPlugin  implements
           providerMode =  Connect.ProviderMode.LIVE ;
         }
 
-        STCPayPaymentParams stcPayPaymentParams = new STCPayPaymentParams(checkoutId, STCPayVerificationOption.MOBILE_PHONE);
-
-        stcPayPaymentParams.setMobilePhoneNumber(number);
-
-        stcPayPaymentParams.setShopperResultUrl(ShopperResultUrl + "://result");
-
-        Transaction transaction = new Transaction(stcPayPaymentParams);
-
         paymentProvider = new OppPaymentProvider(activity.getBaseContext(), providerMode);
 
         //Submit Transaction
@@ -297,8 +267,44 @@ public class PaymentPlugin  implements
         paymentProvider.submitTransaction(transaction, this);
 
       } catch (PaymentException e) {
-        e.printStackTrace();
+        error("0.1", e.getLocalizedMessage(), "");
       }
+    }
+  }
+
+  private void openCustomUISTC(String checkoutId) {
+
+    Toast.makeText(activity.getApplicationContext(), Lang.equals("en_US")
+            ? "Please Waiting.."
+            : "برجاء الانتظار..", Toast.LENGTH_SHORT).show();
+    try {
+      //Set Mode
+      boolean resultMode = mode.equals("test");
+      Connect.ProviderMode providerMode ;
+
+      if (resultMode) {
+        providerMode =  Connect.ProviderMode.TEST ;
+      } else {
+        providerMode =  Connect.ProviderMode.LIVE ;
+      }
+
+      STCPayPaymentParams stcPayPaymentParams = new STCPayPaymentParams(checkoutId, STCPayVerificationOption.MOBILE_PHONE);
+
+      stcPayPaymentParams.setMobilePhoneNumber(number);
+
+      stcPayPaymentParams.setShopperResultUrl(ShopperResultUrl + "://result");
+
+      Transaction transaction = new Transaction(stcPayPaymentParams);
+
+      paymentProvider = new OppPaymentProvider(activity.getBaseContext(), providerMode);
+
+      //Submit Transaction
+      //Listen for transaction Completed - transaction Failed
+      paymentProvider.submitTransaction(transaction, this);
+
+    } catch (PaymentException e) {
+      e.printStackTrace();
+    }
 
   }
 
@@ -308,6 +314,8 @@ public class PaymentPlugin  implements
       case CheckoutActivity.RESULT_OK :
         /* transaction completed */
         Transaction transaction = data.getParcelableExtra(CheckoutActivity.CHECKOUT_RESULT_TRANSACTION);
+
+
         /* resource path if needed */
         // String resourcePath = data.getStringExtra(CheckoutActivity.CHECKOUT_RESULT_RESOURCE_PATH);
         if (transaction.getTransactionType() == TransactionType.SYNC) {
@@ -315,15 +323,15 @@ public class PaymentPlugin  implements
           success("SYNC");
         }
 
-      break ;
+        break ;
       case CheckoutActivity.RESULT_CANCELED :
-              /* shopper canceled the checkout process */
-              error("2", "Canceled", "");
+        /* shopper canceled the checkout process */
+        error("2", "Canceled", "");
         break ;
 
       case CheckoutActivity.RESULT_ERROR :
-              /* shopper error the checkout process */
-              error("3", "Checkout Result Error", "");
+        /* shopper error the checkout process */
+        error("3", "Checkout Result Error", "");
         break ;
 
     }
@@ -356,51 +364,6 @@ public class PaymentPlugin  implements
     return  true ;
   }
 
-  @Override
-  public void transactionCompleted(@NonNull Transaction transaction) {
-
-    if (transaction.getTransactionType() == TransactionType.SYNC) {
-      success("SYNC");
-    } else {
-      /* wait for the callback in the s */
-      Uri uri = Uri.parse(transaction.getRedirectUrl());
-      Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-      activity.startActivity(intent);
-    }
-  }
-
-  @Override
-  public void transactionFailed(@NonNull Transaction transaction, @NonNull PaymentError paymentError) {
-    error("transactionFailed", paymentError.getErrorMessage(), "transactionFailed"
-    );
-  }
-
-  @Override
-  public void brandsValidationRequestSucceeded(@NonNull BrandsValidation brandsValidation) {
-
-  }
-
-  @Override
-  public void brandsValidationRequestFailed(@NonNull PaymentError paymentError) {
-  }
-
-  @Override
-  public void imagesRequestSucceeded(@NonNull ImagesRequest imagesRequest) {
-
-  }
-
-  @Override
-  public void imagesRequestFailed() {
-
-  }
-
-  @Override
-  public void paymentConfigRequestSucceeded(@NonNull CheckoutInfo checkoutInfo) {
-  }
-
-  @Override
-  public void paymentConfigRequestFailed(@NonNull PaymentError paymentError) {
-  }
 
   @Override
   public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
@@ -428,5 +391,63 @@ public class PaymentPlugin  implements
   @Override
   public void onDetachedFromActivity() {
 
+  }
+
+  @Override
+  public void transactionCompleted(@NonNull Transaction transaction) {
+    if (transaction.getTransactionType() == TransactionType.SYNC) {
+      success("SYNC");
+    } else {
+      /* wait for the callback in the s */
+      Uri uri = Uri.parse(transaction.getRedirectUrl());
+      Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+      activity.startActivity(intent);
+    }
+  }
+
+  @Override
+  public void transactionFailed(@NonNull Transaction transaction, @NonNull PaymentError paymentError) {
+    error("transactionFailed", paymentError.getErrorMessage(), "transactionFailed"
+    );
+  }
+
+  @Override
+  public void brandsValidationRequestSucceeded(@NonNull BrandsValidation brandsValidation) {
+    ITransactionListener.super.brandsValidationRequestSucceeded(brandsValidation);
+  }
+
+  @Override
+  public void brandsValidationRequestFailed(@NonNull PaymentError error) {
+    ITransactionListener.super.brandsValidationRequestFailed(error);
+  }
+
+  @Override
+  public void paymentConfigRequestSucceeded(@NonNull CheckoutInfo checkoutInfo) {
+    ITransactionListener.super.paymentConfigRequestSucceeded(checkoutInfo);
+  }
+
+  @Override
+  public void paymentConfigRequestFailed(@NonNull PaymentError error) {
+    ITransactionListener.super.paymentConfigRequestFailed(error);
+  }
+
+  @Override
+  public void imagesRequestSucceeded(@NonNull ImagesRequest imagesRequest) {
+    ITransactionListener.super.imagesRequestSucceeded(imagesRequest);
+  }
+
+  @Override
+  public void imagesRequestFailed() {
+    ITransactionListener.super.imagesRequestFailed();
+  }
+
+  @Override
+  public void binRequestSucceeded(@NonNull String[] brands) {
+    ITransactionListener.super.binRequestSucceeded(brands);
+  }
+
+  @Override
+  public void binRequestFailed() {
+    ITransactionListener.super.binRequestFailed();
   }
 }
